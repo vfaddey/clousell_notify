@@ -28,6 +28,7 @@ class RabbitMQConsumer:
 
     async def connect(self):
         try:
+            print('connecting...')
             self.connection = await aio_pika.connect_robust(self.rabbit_url)
             self.channel = await self.connection.channel()
             await self.channel.set_qos(prefetch_count=10)
