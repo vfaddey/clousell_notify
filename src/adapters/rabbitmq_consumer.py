@@ -45,6 +45,7 @@ class RabbitMQConsumer:
         logger.info("Started consuming messages")
 
     async def on_message(self, message: IncomingMessage):
+        print('got message')
         async with message.process():
             print(message.body.decode())
             try:
