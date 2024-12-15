@@ -39,11 +39,13 @@ class RabbitMQConsumer:
 
     async def start_consuming(self):
         await self.connect()
+        print('connected')
         await self.queue_object.consume(self.on_message)
         logger.info("Started consuming messages")
 
     async def on_message(self, message: IncomingMessage):
         async with message.process():
+            print(message.body.decode())
             try:
                 body = message.body.decode()
                 data = json.loads(body)
