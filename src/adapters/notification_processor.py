@@ -1,5 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.email_sender import EmailSender
@@ -22,25 +24,19 @@ class NotificationProcessorFactory:
             NotificationType.SITE: SiteNotificationProcessor
         }
 
+    @asynccontextmanager
     async def get_processor(self, notification_type: NotificationType):
         processor_class = self.processors.get(notification_type)
         async with self.session_factory() as session:
             if not processor_class:
                 raise ValueError(f"No processor found for notification type: {notification_type}")
-            return processor_class(session, email_sender=self.email_sender)
-
+            yield processor_class(session, email_sender=self.email_sender)
 
 
 class NotificationProcessor(ABC):
 
-    # def process(self, notification: NotificationCreate):
-    #     asyncio.run(self._process(notification))
-
-    async def process(self, notification: NotificationCreate):
-        await self._process(notification)
-
     @abstractmethod
-    async def _process(self, notification: NotificationCreate):
+    async def process(self, notification: NotificationCreate):
         raise NotImplementedError
 
 
@@ -52,7 +48,7 @@ class EmailNotificationProcessor(NotificationProcessor):
         self._template_service = get_template_service(session)
         self._email_sender = email_sender
 
-    async def _process(self, notification: NotificationCreate):
+    async def process(self, notification: NotificationCreate):
         if not notification.email:
             raise
         if not notification.template_id:
@@ -91,6 +87,6 @@ class SiteNotificationProcessor(NotificationProcessor):
                  **kwargs):
         self._notification_service = get_notification_service(session)
 
-    async def _process(self, notification: NotificationCreate):
+    async def process(self, notification: NotificationCreate):
         result = await self._notification_service.create(notification)
         return result

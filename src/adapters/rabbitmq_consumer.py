@@ -49,21 +49,14 @@ class RabbitMQConsumer:
                 data = json.loads(body)
                 notification = NotificationCreate(**data)
                 logger.info(f"Received notification: {notification}")
-                Thread(target=self.do_task, args=(notification,), daemon=True).start()
+                asyncio.create_task(self.__work(notification))
                 logger.info(f"Working with notification: {notification}")
             except CloudsellNotifyException as e:
                 logger.error(f"Error processing message: {e}")
 
-    def do_task(self, notification: NotificationCreate):
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(self.__work(notification))
-        finally:
-            loop.close()
-
     async def __work(self, notification: NotificationCreate):
-        processor = await self.notification_processor_factory.get_processor(notification.type)
-        await processor.process(notification)
+        async with self.notification_processor_factory.get_processor(notification.type) as processor:
+            await processor.process(notification)
 
     async def close(self):
         if self.connection:
