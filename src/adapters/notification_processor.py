@@ -28,6 +28,7 @@ class NotificationProcessorFactory:
     async def get_processor(self, notification_type: NotificationType):
         processor_class = self.processors.get(notification_type)
         async with self.session_factory() as session:
+            print('created session')
             if not processor_class:
                 raise ValueError(f"No processor found for notification type: {notification_type}")
             yield processor_class(session, email_sender=self.email_sender)
@@ -49,11 +50,13 @@ class EmailNotificationProcessor(NotificationProcessor):
         self._email_sender = email_sender
 
     async def process(self, notification: NotificationCreate):
+        print('processing')
         if not notification.email:
             raise
         if not notification.template_id:
             raise
         template: TemplateOut = await self._template_service.get(notification.template_id)
+        print('got template')
         email_fields: dict = notification.extra_data
         if not self.__validate_fields(template.required_fields, email_fields):
             raise

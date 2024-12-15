@@ -49,13 +49,18 @@ class RabbitMQConsumer:
                 data = json.loads(body)
                 notification = NotificationCreate(**data)
                 logger.info(f"Received notification: {notification}")
+                print('Creating')
                 asyncio.create_task(self.__work(notification))
+                print('Sent')
                 logger.info(f"Working with notification: {notification}")
-            except CloudsellNotifyException as e:
+            except Exception as e:
+                print(e)
                 logger.error(f"Error processing message: {e}")
 
     async def __work(self, notification: NotificationCreate):
+        print('working')
         async with self.notification_processor_factory.get_processor(notification.type) as processor:
+            print('got processor')
             await processor.process(notification)
 
     async def close(self):
