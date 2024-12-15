@@ -1,6 +1,5 @@
 import asyncio
 import json
-from threading import Thread
 
 import aio_pika
 import logging
@@ -8,7 +7,6 @@ import logging
 from aio_pika import IncomingMessage
 
 from src.adapters.notification_processor import NotificationProcessorFactory
-from src.exceptions.base import CloudsellNotifyException
 from src.schemas.notification import NotificationCreate
 
 logger = logging.getLogger(__name__)
@@ -28,7 +26,6 @@ class RabbitMQConsumer:
 
     async def connect(self):
         try:
-            print('connecting...')
             self.connection = await aio_pika.connect_robust(self.rabbit_url)
             self.channel = await self.connection.channel()
             await self.channel.set_qos(prefetch_count=10)
@@ -40,31 +37,24 @@ class RabbitMQConsumer:
 
     async def start_consuming(self):
         await self.connect()
-        print('connected')
         await self.queue_object.consume(self.on_message)
         logger.info("Started consuming messages")
 
     async def on_message(self, message: IncomingMessage):
-        print('got message')
         async with message.process():
-            print(message.body.decode())
             try:
                 body = message.body.decode()
                 data = json.loads(body)
                 notification = NotificationCreate(**data)
                 logger.info(f"Received notification: {notification}")
-                print('Creating')
                 asyncio.create_task(self.__work(notification))
-                print('Sent')
                 logger.info(f"Working with notification: {notification}")
             except Exception as e:
                 print(e)
                 logger.error(f"Error processing message: {e}")
 
     async def __work(self, notification: NotificationCreate):
-        print('working')
         async with self.notification_processor_factory.get_processor(notification.type) as processor:
-            print('got processor')
             await processor.process(notification)
 
     async def close(self):
