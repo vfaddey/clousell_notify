@@ -31,9 +31,8 @@ class SMTPEmailSender(EmailSender):
         msg['To'] = to
 
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port) as server:
                 server.ehlo()
-                server.starttls()
                 server.login(self.smtp_username, self.smtp_password)
                 server.auth_plain()
                 server.send_message(msg)
