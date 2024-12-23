@@ -27,7 +27,8 @@ class PricingPlanService:
                                          price=pricing_plan.price,
                                          server_type=pricing_plan.server_type,
                                          provider_id=provider.id,
-                                         billing_cycle=pricing_plan.billing_cycle)
+                                         billing_cycle=pricing_plan.billing_cycle,
+                                         additional_info=pricing_plan.additional_info)
             plan_to_insert.features = features
             inserted = await self.__pricing_plan_repository.create(plan_to_insert)
         except PlanInsertFailed as e:

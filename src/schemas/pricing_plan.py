@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, UUID4, Field, condecimal
 from src.models import RAMType, DiskType, BillingCycle, ServerType
+from pydantic import Json
 
 
 class FeaturesAdd(BaseModel):
@@ -33,6 +34,7 @@ class PricingPlanAdd(BaseModel):
     server_type: ServerType
     price: condecimal()
     features: FeaturesAdd
+    additional_info: Optional[Json | dict] = {}
 
     class Config:
         from_attributes = True
