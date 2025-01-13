@@ -36,7 +36,8 @@ class TemplateService:
             if not result:
                 raise NoSuchTemplate(f'Template with id {template_id} not found')
             return result
-        except:
+        except Exception as e:
+            print(e)
             raise CloudsellNotifyException('Failed to delete template')
 
     async def update(self):
