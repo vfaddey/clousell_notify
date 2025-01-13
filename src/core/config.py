@@ -1,13 +1,10 @@
 import asyncio
 import ssl
 from datetime import datetime, timedelta
-from os import pread
 
 import certifi
 from typing import Optional
 import aiohttp
-
-from pathlib import Path
 from pydantic_settings import BaseSettings
 
 
@@ -39,8 +36,9 @@ class Settings(BaseSettings):
     RABBITMQ_URL: str
     RABBITMQ_QUEUE: str
 
-    __public_key = None
-    __public_key_last_update = None
+    __public_key: Optional[str] = None
+    __public_key_last_update: Optional[datetime] = None
+    __lock = asyncio.Lock()
 
     class Config:
         env_file = ".env"
@@ -52,27 +50,32 @@ class Settings(BaseSettings):
 
     @property
     def JWT_PUBLIC_KEY(self):
-        if not self.__public_key_last_update:
+        if not self.__public_key or datetime.utcnow() - self.__public_key_last_update >= timedelta(hours=1):
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                asyncio.create_task(self.update_public_key())
+                asyncio.create_task(self._update_public_key())
             else:
-                loop.run_until_complete(self.update_public_key())
-            self.__public_key_last_update = datetime.utcnow()
-        if datetime.utcnow() - self.__public_key_last_update < timedelta(hours=1):
-            return self.__public_key
+                loop.run_until_complete(self._update_public_key())
         return self.__public_key
 
-    async def update_public_key(self):
-        try:
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
-            connector = aiohttp.TCPConnector(ssl=ssl_context)
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(self.AUTH_SERVER_URL + self.JWKS_URI) as response:
-                    res = await response.json()
-                    self.__public_key = res.get('keys', [])[0].get('n', '')
-        except:
-            raise Exception('Something went wrong, while updating public key')
+    async def _update_public_key(self):
+        async with self.__lock:
+            if not self.__public_key or datetime.utcnow() - self.__public_key_last_update >= timedelta(hours=1):
+                try:
+                    ssl_context = ssl.create_default_context(cafile=certifi.where())
+                    connector = aiohttp.TCPConnector(ssl=ssl_context)
+                    async with aiohttp.ClientSession(connector=connector) as session:
+                        async with session.get(self.AUTH_SERVER_URL + self.JWKS_URI) as response:
+                            if response.status == 200:
+                                res = await response.json()
+                                self.__public_key = res.get('keys', [])[0].get('n', '')
+                                self.__public_key_last_update = datetime.utcnow()
+                            else:
+                                raise Exception(f"Failed to fetch JWKS: {response.status} {response.reason}")
+                except Exception as e:
+                    self.__public_key = None  # Reset key on failure
+                    self.__public_key_last_update = None
+                    raise Exception(f"Error updating public key: {str(e)}")
 
 
 settings = Settings()
