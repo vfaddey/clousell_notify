@@ -30,7 +30,7 @@ class Notification(Base):
     message = Column(String, nullable=True, default='')
 
     template_id = Column(UUID(as_uuid=True), ForeignKey('templates.id'), nullable=True)
-    template = relationship("Template")
+    template = relationship("Template", back_populates='notifications')
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     extra_data = Column(JSON, nullable=True)

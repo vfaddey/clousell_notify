@@ -5,6 +5,7 @@ from sqlalchemy import (Column,
                         UUID,
                         String,
                         DateTime)
+from sqlalchemy.orm import relationship
 
 from src.db.database import Base
 
@@ -20,3 +21,5 @@ class Template(Base):
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    notifications = relationship("Notification", cascade="all, delete-orphan", back_populates="template")
